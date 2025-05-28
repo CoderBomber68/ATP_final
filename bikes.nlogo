@@ -3,14 +3,13 @@ globals [ lane-width number-of-bikes number-of-cars ]
 breed [bikes bike]
 breed [cars car]
 
-bikes-own [ direction ]
-cars-own [ direction ]
+bikes-own [ direction start-edge ]
+cars-own [ direction start-edge ]
 
 to setup
+  no-display
   clear-all
   set lane-width 12
-  set number-of-bikes 2
-  set number-of-cars 2
 
   ;; Draw environment
   ask patches [ set pcolor green ]
@@ -19,46 +18,55 @@ to setup
   ask patches with [ pxcor = 0 and abs pycor > lane-width and pycor mod 2 = 0 ] [ set pcolor white ]
   ask patches with [ pycor = 0 and abs pxcor > lane-width and pxcor mod 2 = 0 ] [ set pcolor white ]
 
-  ;; Spawn agents
-  create-bikes number-of-bikes [
-    set color red
-    set shape "bike"
-    set size 3
-    let edge one-of ["top" "bottom" "left" "right"]
-    move-to-edge edge
-    set direction one-of ["left" "right" "straight"]
-  ]
-
-  create-cars number-of-cars [
-    set color blue
-    set shape "car"
-    set size 3
-    let edge one-of ["top" "bottom" "left" "right"]
-    move-to-edge edge
-    set direction one-of ["left" "right" "straight"]
-  ]
+  ;; For each edge, maybe spawn one agent (bike or car)
+  foreach ["top" "bottom" "left" "right"] [
+  edge ->
+    if random-float 1.0 < 0.75 [  ;; 75% chance to spawn
+      ifelse random 2 = 0 [
+        ;; Spawn bike
+        create-bikes 1 [
+          set color red
+          set shape "bike"
+          set size 3
+          set start-edge edge
+          move-to-edge edge
+          set direction one-of ["left" "right" "straight"]
+        ]
+      ] [
+        ;; Spawn car
+        create-cars 1 [
+          set color blue
+          set shape "car"
+          set size 3
+          set start-edge edge
+          move-to-edge edge
+          set direction one-of ["left" "right" "straight"]
+        ]
+      ]
+    ]
+]
 
   reset-ticks
+  display
 end
 
 to move-to-edge [edge]
-
-    if edge = "top" [
-      setxy (lane-width / -2) max-pycor
-      set heading 180
-    ]
-    if edge = "bottom" [
-      setxy (lane-width / 2) min-pycor
-      set heading 0
-    ]
-    if edge = "left" [
-      setxy min-pxcor (lane-width / -2)
-      set heading 90
-    ]
-    if edge = "right" [
-      setxy max-pxcor (lane-width / 2)
-      set heading 270
-    ]
+  if edge = "top" [
+    setxy (lane-width / -2) max-pycor
+    set heading 180
+  ]
+  if edge = "bottom" [
+    setxy (lane-width / 2) min-pycor
+    set heading 0
+  ]
+  if edge = "left" [
+    setxy min-pxcor (lane-width / -2)
+    set heading 90
+  ]
+  if edge = "right" [
+    setxy max-pxcor (lane-width / 2)
+    set heading 270
+  ]
 end
 
 to go
@@ -66,9 +74,47 @@ to go
   tick
 end
 
-
 to move-agent
-  fd 1
+  ;; Turning at the middle
+  if start-edge = "top"[
+    if direction = "left" and (distancexy -6.25 -6.25) <= 1[
+      set heading 90
+    ]
+    if direction = "right" and (distancexy -6.25 6.25) <= 1[
+      set heading 270
+    ]
+  ]
+  if start-edge = "bottom"[
+    if direction = "left" and (distancexy 6.25 6.25) <= 1[
+      set heading 270
+    ]
+    if direction = "right" and (distancexy 6.25 -6.25) <= 1[
+      set heading 90
+    ]
+  ]
+  if start-edge = "left"[
+    if direction = "left" and (distancexy 6.25 -6.25) <= 1[
+      set heading 0
+    ]
+    if direction = "right" and (distancexy -6.25 -6.25) <= 1[
+      set heading 180
+    ]
+  ]
+  if start-edge = "right"[
+    if direction = "left" and (distancexy -6.25 6.25) <= 1[
+      set heading 180
+    ]
+    if direction = "right" and (distancexy 6.25 6.25) <= 1[
+      set heading 0
+    ]
+  ]
+
+  if breed = cars [
+    fd 1.5
+  ]
+  if breed = bikes [
+    fd 1
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -131,6 +177,17 @@ NIL
 NIL
 NIL
 0
+
+SWITCH
+24
+127
+190
+160
+bikes-signal-turn
+bikes-signal-turn
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
