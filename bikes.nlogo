@@ -5,6 +5,7 @@ globals [
   speed-limit
   max-accel
   max-brake
+  used-seed
 ]
 
 breed [bikes bike]
@@ -14,11 +15,13 @@ bikes-own [ direction start-edge speed ]
 cars-own [ direction start-edge speed ]
 
 to setup
-  no-display
   clear-all
   set lane-width 12
   set-default-shape cars "car"
   set-default-shape bikes "bike"
+  set used-seed new-seed
+  show used-seed
+  random-seed used-seed
 
   set speed-limit 3
   set max-accel 0.5
