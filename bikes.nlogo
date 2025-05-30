@@ -1,4 +1,8 @@
-globals [ lane-width number-of-bikes number-of-cars ]
+globals [
+  lane-width
+  number-of-bikes
+  number-of-cars
+]
 
 breed [bikes bike]
 breed [cars car]
@@ -10,6 +14,14 @@ to setup
   no-display
   clear-all
   set lane-width 12
+  set-default-shape cars "car"
+  set-default-shape bikes "bike"
+
+  ;; Set spawn frequencies (in percentage)
+  set freq-north 1
+  set freq-east 1
+  set freq-south 1
+  set freq-west 1
 
   ;; Draw environment
   ask patches [ set pcolor green ]
@@ -18,113 +30,102 @@ to setup
   ask patches with [ pxcor = 0 and abs pycor > lane-width and pycor mod 2 = 0 ] [ set pcolor white ]
   ask patches with [ pycor = 0 and abs pxcor > lane-width and pxcor mod 2 = 0 ] [ set pcolor white ]
 
-  ;; For each edge, maybe spawn one agent (bike or car)
-  foreach ["top" "bottom" "left" "right"] [
-  edge ->
-    if random-float 1.0 < 0.75 [  ;; 75% chance to spawn
-      ifelse random 2 = 0 [
-        ;; Spawn bike
-        create-bikes 1 [
-          set color red
-          set shape "bike"
-          set size 3
-          set start-edge edge
-          move-to-edge edge
-          set direction one-of ["left" "right" "straight"]
-        ]
-      ] [
-        ;; Spawn car
-        create-cars 1 [
-          set color blue
-          set shape "car"
-          set size 3
-          set start-edge edge
-          move-to-edge edge
-          set direction one-of ["left" "right" "straight"]
-        ]
-      ]
-    ]
-]
-
   reset-ticks
   display
 end
 
-to move-to-edge [edge]
-  if edge = "top" [
-    setxy (lane-width / -2) max-pycor
-    set heading 180
-  ]
-  if edge = "bottom" [
-    setxy (lane-width / 2) min-pycor
-    set heading 0
-  ]
-  if edge = "left" [
-    setxy min-pxcor (lane-width / -2)
-    set heading 90
-  ]
-  if edge = "right" [
-    setxy max-pxcor (lane-width / 2)
-    set heading 270
-  ]
-end
-
 to go
   ask turtles [ move-agent ]
+
+  make-new-car freq-north (lane-width / 2) min-pycor 0
+  make-new-bike freq-north (lane-width / 2) min-pycor 0
+
+  make-new-car freq-east min-pxcor (lane-width / -2) 90
+  make-new-bike freq-east min-pxcor (lane-width / -2) 90
+
+  make-new-car freq-south (lane-width / -2) max-pycor 180
+  make-new-bike freq-south (lane-width / -2) max-pycor 180
+
+  make-new-car freq-west max-pxcor (lane-width / 2) 270
+  make-new-bike freq-west max-pxcor (lane-width / 2) 270
+
   tick
 end
 
 to move-agent
   ;; Turning at the middle
-  if start-edge = "top"[
-    if direction = "left" and (distancexy -6.25 -6.25) <= 1[
-      set heading 90
-    ]
-    if direction = "right" and (distancexy -6.25 6.25) <= 1[
-      set heading 270
-    ]
+  if start-edge = "top" [
+    if direction = "left" and (distancexy -6.25 -6.25) <= 1 [ set heading 90 ]
+    if direction = "right" and (distancexy -6.25 6.25) <= 1 [ set heading 270 ]
   ]
-  if start-edge = "bottom"[
-    if direction = "left" and (distancexy 6.25 6.25) <= 1[
-      set heading 270
-    ]
-    if direction = "right" and (distancexy 6.25 -6.25) <= 1[
-      set heading 90
-    ]
+  if start-edge = "bottom" [
+    if direction = "left" and (distancexy 6.25 6.25) <= 1 [ set heading 270 ]
+    if direction = "right" and (distancexy 6.25 -6.25) <= 1 [ set heading 90 ]
   ]
-  if start-edge = "left"[
-    if direction = "left" and (distancexy 6.25 -6.25) <= 1[
-      set heading 0
-    ]
-    if direction = "right" and (distancexy -6.25 -6.25) <= 1[
-      set heading 180
-    ]
+  if start-edge = "left" [
+    if direction = "left" and (distancexy 6.25 -6.25) <= 1 [ set heading 0 ]
+    if direction = "right" and (distancexy -6.25 -6.25) <= 1 [ set heading 180 ]
   ]
-  if start-edge = "right"[
-    if direction = "left" and (distancexy -6.25 6.25) <= 1[
-      set heading 180
-    ]
-    if direction = "right" and (distancexy 6.25 6.25) <= 1[
-      set heading 0
-    ]
+  if start-edge = "right" [
+    if direction = "left" and (distancexy -6.25 6.25) <= 1 [ set heading 180 ]
+    if direction = "right" and (distancexy 6.25 6.25) <= 1 [ set heading 0 ]
   ]
 
-  if breed = cars [
-    fd 1.5
+  ifelse can-move? 1 [
+    if breed = cars [ fd 1.5 ]
+    if breed = bikes [ fd 1 ]
+  ] [ die ]
+end
+
+to make-new-car [ freq x y h ]
+  if (random-float 100 < freq) and spawn-allowed? x y h [
+    create-cars 1 [
+      setxy x y
+      set size 3
+      set heading h
+      set color blue
+      set start-edge edge-name h
+      set direction one-of ["left" "right" "straight"]
+    ]
   ]
-  if breed = bikes [
-    fd 1
+end
+
+to make-new-bike [ freq x y h ]
+  if (random-float 100 < freq) and spawn-allowed? x y h [
+    create-bikes 1 [
+      setxy x y
+      set size 3
+      set heading h
+      set color red
+      set start-edge edge-name h
+      set direction one-of ["left" "right" "straight"]
+    ]
   ]
+end
+
+to-report spawn-allowed? [ x y h ]
+  if h = 0    [ report not any? turtles-on patches with [ pxcor = x and pycor >= y and pycor <= y ] ]
+  if h = 90   [ report not any? turtles-on patches with [ pycor = y and pxcor >= x and pxcor <= x ] ]
+  if h = 180  [ report not any? turtles-on patches with [ pxcor = x and pycor <= y and pycor >= y ] ]
+  if h = 270  [ report not any? turtles-on patches with [ pycor = y and pxcor <= x and pxcor >= x ] ]
+  report false
+end
+
+to-report edge-name [ h ]
+  if h = 0    [ report "bottom" ]
+  if h = 90   [ report "left" ]
+  if h = 180  [ report "top" ]
+  if h = 270  [ report "right" ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 240
 30
-698
-489
+636
+427
 -1
 -1
-8.824
+7.61
 1
 10
 1
@@ -138,8 +139,8 @@ GRAPHICS-WINDOW
 25
 -25
 25
-0
-0
+1
+1
 1
 ticks
 30.0
@@ -178,16 +179,82 @@ NIL
 NIL
 0
 
-SWITCH
-24
-127
-190
-160
-bikes-signal-turn
-bikes-signal-turn
+SLIDER
+27
+251
+199
+284
+freq-north
+freq-north
 0
+5
+1.0
+0.1
 1
--1000
+NIL
+HORIZONTAL
+
+SLIDER
+30
+197
+202
+230
+freq-east
+freq-east
+0
+5
+1.0
+0.1
+1
+NIL
+HORIZONTAL
+
+BUTTON
+97
+108
+178
+141
+go once
+go
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+0
+
+SLIDER
+24
+314
+196
+347
+freq-south
+freq-south
+0
+5
+1.0
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+28
+387
+200
+420
+freq-west
+freq-west
+0
+5
+1.0
+0.1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -242,27 +309,27 @@ true
 Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
 
 bike
-false
+true
 1
-Line -7500403 false 137 183 72 184
-Circle -7500403 false false 65 184 22
-Circle -7500403 false false 128 187 16
-Circle -16777216 false false 177 148 95
-Circle -2674135 false true 174 144 102
-Circle -2674135 false true 24 144 102
-Circle -16777216 false false 28 148 95
-Polygon -2674135 true true 225 195 210 90 202 92 203 107 108 122 93 83 85 85 98 123 89 133 75 195 135 195 136 188 86 188 98 133 206 116 218 195
-Polygon -2674135 true true 92 83 136 193 129 196 83 85
-Polygon -2674135 true true 135 188 209 120 210 131 136 196
-Line -7500403 false 141 173 130 219
-Line -7500403 false 145 172 134 172
-Line -7500403 false 134 219 123 219
-Polygon -2674135 true true 113 92 102 92 92 97 83 100 69 93 69 84 84 82 99 83 116 85
-Polygon -2674135 true true 229 86 202 93 199 85 226 81
-Rectangle -16777216 true false 225 75 225 90
-Polygon -2674135 true true 230 87 230 72 222 71 222 89
-Circle -7500403 false false 125 184 22
-Line -7500403 false 141 206 72 205
+Line -7500403 false 183 163 184 228
+Circle -7500403 false false 184 213 22
+Circle -7500403 false false 187 156 16
+Circle -16777216 false false 148 28 95
+Circle -2674135 false true 144 24 102
+Circle -2674135 false true 144 174 102
+Circle -16777216 false false 148 177 95
+Polygon -2674135 true true 195 75 90 90 92 98 107 97 122 192 83 207 85 215 123 202 133 211 195 225 195 165 188 164 188 214 133 202 116 94 195 82
+Polygon -2674135 true true 83 208 193 164 196 171 85 217
+Polygon -2674135 true true 188 165 120 91 131 90 196 164
+Line -7500403 false 173 159 219 170
+Line -7500403 false 172 155 172 166
+Line -7500403 false 219 166 219 177
+Polygon -2674135 true true 92 187 92 198 97 208 100 217 93 231 84 231 82 216 83 201 85 184
+Polygon -2674135 true true 86 71 93 98 85 101 81 74
+Rectangle -16777216 true false 75 75 90 75
+Polygon -2674135 true true 87 70 72 70 71 78 89 78
+Circle -7500403 false false 184 153 22
+Line -7500403 false 206 159 205 228
 
 box
 false
@@ -296,14 +363,14 @@ Line -16777216 false 150 105 195 60
 Line -16777216 false 150 105 105 60
 
 car
-false
+true
 0
-Polygon -7500403 true true 300 180 279 164 261 144 240 135 226 132 213 106 203 84 185 63 159 50 135 50 75 60 0 150 0 165 0 225 300 225 300 180
+Polygon -7500403 true true 180 0 164 21 144 39 135 60 132 74 106 87 84 97 63 115 50 141 50 165 60 225 150 300 165 300 225 300 225 0 180 0
+Circle -16777216 true false 180 30 90
 Circle -16777216 true false 180 180 90
-Circle -16777216 true false 30 180 90
-Polygon -16777216 true false 162 80 132 78 134 135 209 135 194 105 189 96 180 89
-Circle -7500403 true true 47 195 58
+Polygon -16777216 true false 80 138 78 168 135 166 135 91 105 106 96 111 89 120
 Circle -7500403 true true 195 195 58
+Circle -7500403 true true 195 47 58
 
 circle
 false
