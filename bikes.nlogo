@@ -104,10 +104,10 @@ to make-new-bike [ freq x y h ]
 end
 
 to-report spawn-allowed? [ x y h ]
-  if h = 0    [ report not any? turtles-on patches with [ pxcor = x and pycor >= y and pycor <= y ] ]
-  if h = 90   [ report not any? turtles-on patches with [ pycor = y and pxcor >= x and pxcor <= x ] ]
-  if h = 180  [ report not any? turtles-on patches with [ pxcor = x and pycor <= y and pycor >= y ] ]
-  if h = 270  [ report not any? turtles-on patches with [ pycor = y and pxcor <= x and pxcor >= x ] ]
+  if h = 0    [ report not any? turtles-on patches with [ pxcor = x and pycor >= y and pycor <= y + 2 ] ]
+  if h = 90   [ report not any? turtles-on patches with [ pycor = y and pxcor >= x and pxcor <= x + 2 ] ]
+  if h = 180  [ report not any? turtles-on patches with [ pxcor = x and pycor <= y and pycor >= y - 2 ] ]
+  if h = 270  [ report not any? turtles-on patches with [ pycor = y and pxcor <= x and pxcor >= x - 2 ] ]
   report false
 end
 
