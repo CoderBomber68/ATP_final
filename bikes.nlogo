@@ -6,13 +6,14 @@ globals [
   max-accel
   max-brake
   used-seed
+  num-of-accidents
 ]
 
 breed [bikes bike]
 breed [cars car]
 
-bikes-own [ direction start-edge speed ]
-cars-own [ direction start-edge speed ]
+bikes-own [ direction start-edge speed crashed]
+cars-own [ direction start-edge speed crashed]
 
 to setup
   clear-all
@@ -56,7 +57,14 @@ to go
 end
 
 to move-agent
+
   adjust-speed
+  detect-accident
+
+  if crashed [
+    set speed 0
+    set color yellow
+  ]
 
   let agent-ahead one-of other turtles in-cone 3 30
 
@@ -97,6 +105,19 @@ to move-agent
   ]
 end
 
+to detect-accident
+  if not crashed [
+    let close-agent one-of other turtles with [distance myself < 2 and not crashed]
+    if close-agent != nobody [
+      set crashed true
+      ask close-agent [
+        set crashed true
+      ]
+      set num-of-accidents num-of-accidents + 1
+    ]
+  ]
+end
+
 to adjust-speed
   if speed = 0 [ set speed 1 ]
 
@@ -110,7 +131,7 @@ to adjust-speed
   let blocked-turtle one-of other turtles in-cone 4 90
 
   if blocked-turtle != nobody [
-    let dist-ahead distance blocked-turtle - 3
+    let dist-ahead distance blocked-turtle - 5
     while [ breaking-distance-at target-speed > dist-ahead and target-speed > 0 ] [
       set target-speed target-speed - max-brake
     ]
@@ -134,6 +155,7 @@ to make-new-car [ freq x y h ]
       set start-edge edge-name h
       set direction one-of ["left" "right" "straight"]
       set speed 1
+      set crashed false
     ]
   ]
 end
@@ -148,6 +170,7 @@ to make-new-bike [ freq x y h ]
       set start-edge edge-name h
       set direction one-of ["left" "right" "straight"]
       set speed 1
+      set crashed false
     ]
   ]
 end
@@ -195,10 +218,10 @@ ticks
 30.0
 
 BUTTON
-15
-48
-81
-81
+28
+32
+113
+65
 NIL
 setup
 NIL
@@ -212,10 +235,10 @@ NIL
 1
 
 BUTTON
-112
-49
-175
-82
+118
+32
+199
+65
 NIL
 go
 T
@@ -229,40 +252,40 @@ NIL
 0
 
 SLIDER
-27
-251
-199
-284
+28
+158
+200
+191
 freq-north
 freq-north
 0
 5
-2.0
+5.0
 0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-30
-197
-202
-230
+28
+122
+200
+155
 freq-east
 freq-east
 0
 5
-2.0
+5.0
 0.1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-97
-108
-178
-141
+118
+72
+199
+105
 go once
 go
 NIL
@@ -276,15 +299,15 @@ NIL
 0
 
 SLIDER
-24
-314
-196
-347
+28
+193
+200
+226
 freq-south
 freq-south
 0
 5
-2.0
+5.0
 0.1
 1
 NIL
@@ -292,18 +315,29 @@ HORIZONTAL
 
 SLIDER
 28
-387
+229
 200
-420
+262
 freq-west
 freq-west
 0
 5
-2.0
+5.0
 0.1
 1
 NIL
 HORIZONTAL
+
+MONITOR
+817
+30
+958
+75
+Number of accidents
+num-of-accidents
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
