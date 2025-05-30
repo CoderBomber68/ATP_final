@@ -2,13 +2,16 @@ globals [
   lane-width
   number-of-bikes
   number-of-cars
+  speed-limit
+  max-accel
+  max-brake
 ]
 
 breed [bikes bike]
 breed [cars car]
 
-bikes-own [ direction start-edge ]
-cars-own [ direction start-edge ]
+bikes-own [ direction start-edge speed ]
+cars-own [ direction start-edge speed ]
 
 to setup
   no-display
@@ -17,13 +20,10 @@ to setup
   set-default-shape cars "car"
   set-default-shape bikes "bike"
 
-  ;; Set spawn frequencies (in percentage)
-  set freq-north 1
-  set freq-east 1
-  set freq-south 1
-  set freq-west 1
+  set speed-limit 3
+  set max-accel 0.5
+  set max-brake 1
 
-  ;; Draw environment
   ask patches [ set pcolor green ]
   ask patches with [ abs pycor <= lane-width ] [ set pcolor black ]
   ask patches with [ abs pxcor <= lane-width ] [ set pcolor black ]
@@ -53,28 +53,72 @@ to go
 end
 
 to move-agent
-  ;; Turning at the middle
-  if start-edge = "top" [
-    if direction = "left" and (distancexy -6.25 -6.25) <= 1 [ set heading 90 ]
-    if direction = "right" and (distancexy -6.25 6.25) <= 1 [ set heading 270 ]
-  ]
-  if start-edge = "bottom" [
-    if direction = "left" and (distancexy 6.25 6.25) <= 1 [ set heading 270 ]
-    if direction = "right" and (distancexy 6.25 -6.25) <= 1 [ set heading 90 ]
-  ]
-  if start-edge = "left" [
-    if direction = "left" and (distancexy 6.25 -6.25) <= 1 [ set heading 0 ]
-    if direction = "right" and (distancexy -6.25 -6.25) <= 1 [ set heading 180 ]
-  ]
-  if start-edge = "right" [
-    if direction = "left" and (distancexy -6.25 6.25) <= 1 [ set heading 180 ]
-    if direction = "right" and (distancexy 6.25 6.25) <= 1 [ set heading 0 ]
+  adjust-speed
+
+  let agent-ahead one-of other turtles in-cone 3 30
+
+  if agent-ahead != nobody [
+    let dist-ahead distance agent-ahead
+    let min-speed max (list (speed - max-brake) 0)
+    let space-ahead (dist-ahead - 1)
+
+    while [
+      breaking-distance-at speed > space-ahead and
+      speed > min-speed
+    ] [
+      set speed speed - max-brake
+    ]
   ]
 
-  ifelse can-move? 1 [
-    if breed = cars [ fd 1.5 ]
-    if breed = bikes [ fd 1 ]
-  ] [ die ]
+  if start-edge = "top" [
+    if direction = "left" and (distancexy -6.5 -6.5) <= 1 [ set heading 90 ]
+    if direction = "right" and (distancexy -6.5 6.5) <= 1 [ set heading 270 ]
+  ]
+  if start-edge = "bottom" [
+    if direction = "left" and (distancexy 6.5 6.5) <= 1 [ set heading 270 ]
+    if direction = "right" and (distancexy 6.5 -6.5) <= 1 [ set heading 90 ]
+  ]
+  if start-edge = "left" [
+    if direction = "left" and (distancexy 6.5 -6.5) <= 1 [ set heading 0 ]
+    if direction = "right" and (distancexy -6.5 -6.5) <= 1 [ set heading 180 ]
+  ]
+  if start-edge = "right" [
+    if direction = "left" and (distancexy -6.5 6.5) <= 1 [ set heading 180 ]
+    if direction = "right" and (distancexy 6.5 6.5) <= 1 [ set heading 0 ]
+  ]
+
+  ifelse can-move? speed [
+    fd speed
+  ] [
+    die
+  ]
+end
+
+to adjust-speed
+  if speed = 0 [ set speed 1 ]
+
+  let my-speed-limit speed-limit
+  if breed = bikes [ set my-speed-limit 2 ]
+  if breed = cars [ set my-speed-limit 3 ]
+
+  let max-speed min (list (speed + max-accel) my-speed-limit)
+  let target-speed max-speed
+
+  let blocked-turtle one-of other turtles in-cone 4 90
+
+  if blocked-turtle != nobody [
+    let dist-ahead distance blocked-turtle - 3
+    while [ breaking-distance-at target-speed > dist-ahead and target-speed > 0 ] [
+      set target-speed target-speed - max-brake
+    ]
+  ]
+
+  set speed max list 0 target-speed
+end
+
+to-report breaking-distance-at [ speed-at-this-tick ]
+  let min-speed-at-next-tick max (list (speed-at-this-tick - max-brake) 0)
+  report speed-at-this-tick + min-speed-at-next-tick
 end
 
 to make-new-car [ freq x y h ]
@@ -86,6 +130,7 @@ to make-new-car [ freq x y h ]
       set color blue
       set start-edge edge-name h
       set direction one-of ["left" "right" "straight"]
+      set speed 1
     ]
   ]
 end
@@ -99,6 +144,7 @@ to make-new-bike [ freq x y h ]
       set color red
       set start-edge edge-name h
       set direction one-of ["left" "right" "straight"]
+      set speed 1
     ]
   ]
 end
@@ -121,11 +167,11 @@ end
 GRAPHICS-WINDOW
 240
 30
-636
-427
+768
+559
 -1
 -1
-7.61
+10.2
 1
 10
 1
@@ -188,7 +234,7 @@ freq-north
 freq-north
 0
 5
-1.0
+2.0
 0.1
 1
 NIL
@@ -203,7 +249,7 @@ freq-east
 freq-east
 0
 5
-1.0
+2.0
 0.1
 1
 NIL
@@ -235,7 +281,7 @@ freq-south
 freq-south
 0
 5
-1.0
+2.0
 0.1
 1
 NIL
@@ -250,7 +296,7 @@ freq-west
 freq-west
 0
 5
-1.0
+2.0
 0.1
 1
 NIL
