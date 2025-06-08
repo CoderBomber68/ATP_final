@@ -7,13 +7,21 @@ globals [
   max-brake
   used-seed
   num-of-accidents
+  crash-in-intersection
 ]
 
 breed [bikes bike]
 breed [cars car]
 
-bikes-own [ direction start-edge speed crashed]
-cars-own [ direction start-edge speed crashed]
+turtles-own [
+  direction
+  start-edge
+  speed
+  crashed
+  yielding
+  crash-tick
+  wait-counter
+]
 
 to setup
   clear-all
@@ -53,6 +61,9 @@ to go
   make-new-car freq-west max-pxcor (lane-width / 2) 270
   make-new-bike freq-west max-pxcor (lane-width / 2) 270
 
+  clear-old-crashes
+  set crash-in-intersection any? turtles with [crashed and in-intersection-zone?]
+
   tick
 end
 
@@ -60,6 +71,13 @@ to move-agent
 
   adjust-speed
   detect-accident
+
+  if in-waiting-zone? [
+    if crash-in-intersection [
+      set speed 0
+      stop
+    ]
+  ]
 
   if crashed [
     set speed 0
@@ -79,6 +97,35 @@ to move-agent
     ] [
       set speed speed - max-brake
     ]
+  ]
+
+  ifelse in-waiting-zone? [
+    set wait-counter wait-counter + 1
+    if reserved-entry? [
+      set speed 0
+      stop
+    ]
+
+    let path-blocked any? other turtles with [
+      in-intersection-zone? and
+      not crashed and
+      conflicts-with? myself
+    ]
+
+    ifelse wait-counter > 20 and not path-blocked [
+      set speed 1
+      set yielding false
+    ] [ ifelse should-yield? or path-blocked [
+        set speed 0
+        set yielding true
+        stop
+      ] [
+        set speed 1
+        set yielding false
+      ]
+    ]
+  ] [
+    set wait-counter 0
   ]
 
   if start-edge = "top" [
@@ -110,15 +157,37 @@ to detect-accident
     let close-agent one-of other turtles with [distance myself < 2 and not crashed]
     if close-agent != nobody [
       set crashed true
+      set crash-tick ticks
+      set wait-counter 0
       ask close-agent [
         set crashed true
+        set crash-tick ticks
+        set wait-counter 0
       ]
       set num-of-accidents num-of-accidents + 1
     ]
   ]
 end
 
+to clear-old-crashes
+  ask turtles with [crashed and ticks - crash-tick >= 20] [
+    die
+  ]
+end
+
 to adjust-speed
+  if in-waiting-zone? [
+    if crash-in-intersection [
+      set speed 0
+      stop
+    ]
+  ]
+
+  if in-waiting-zone? and should-yield? [
+    set speed 0
+    stop
+  ]
+
   if speed = 0 [ set speed 1 ]
 
   let my-speed-limit speed-limit
@@ -156,14 +225,24 @@ to make-new-car [ freq x y h ]
       set direction one-of ["left" "right" "straight"]
       set speed 1
       set crashed false
+      set wait-counter 0
     ]
   ]
 end
 
 to make-new-bike [ freq x y h ]
   if (random-float 100 < freq) and spawn-allowed? x y h [
+    let offset 4
+    let bx x
+    let by y
+
+    if h = 0     [ set bx x + offset ]
+    if h = 90    [ set by y - offset ]
+    if h = 180   [ set bx x - offset ]
+    if h = 270   [ set by y + offset ]
+
     create-bikes 1 [
-      setxy x y
+      setxy bx by
       set size 3
       set heading h
       set color red
@@ -171,6 +250,7 @@ to make-new-bike [ freq x y h ]
       set direction one-of ["left" "right" "straight"]
       set speed 1
       set crashed false
+      set wait-counter 0
     ]
   ]
 end
@@ -189,6 +269,69 @@ to-report edge-name [ h ]
   if h = 180  [ report "top" ]
   if h = 270  [ report "right" ]
 end
+
+to-report conflicts-with? [ other-turtle ]
+  let my-heading heading
+  let other-heading [heading] of other-turtle
+  let angle abs (subtract-headings other-heading my-heading)
+  report angle > 45 and angle < 135
+end
+
+to-report in-intersection-zone?
+  report abs pxcor <= 12 and abs pycor <= 12
+end
+
+to-report in-waiting-zone?
+  if heading = 0     [ report pycor >= -16 and pycor <= -13 and abs pxcor <= 12 ]
+  if heading = 90    [ report pxcor >= -16 and pxcor <= -13 and abs pycor <= 12 ]
+  if heading = 180   [ report pycor <= 16 and pycor >= 13 and abs pxcor <= 12 ]
+  if heading = 270   [ report pxcor <= 16 and pxcor >= 13 and abs pycor <= 12 ]
+  report false
+end
+
+to-report reserved-entry?
+  let my-wait wait-counter
+  report any? other turtles with [
+    start-edge = [start-edge] of myself and
+    not crashed and
+    in-waiting-zone? and
+    wait-counter > my-wait
+  ]
+end
+
+to-report right-of [h]
+  report (h + 90) mod 360
+end
+
+to-report should-yield?
+  if not in-waiting-zone? [ report false ]
+
+  let my-h heading
+  let my-dir direction
+
+  let contenders other turtles with [
+    not crashed and speed > 0 and in-waiting-zone?
+  ]
+
+  if any? contenders with [
+    subtract-headings heading my-h > 0 and subtract-headings heading my-h < 90
+  ] [
+    report true
+  ]
+
+  if my-dir = "left" [
+    let opp-h (right-of (right-of my-h))
+    if any? contenders with [
+      heading = opp-h and direction = "straight"
+    ] [
+      report true
+    ]
+  ]
+
+  report false
+end
+
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 240
@@ -260,7 +403,7 @@ freq-north
 freq-north
 0
 5
-5.0
+3.0
 0.1
 1
 NIL
@@ -275,7 +418,7 @@ freq-east
 freq-east
 0
 5
-5.0
+3.0
 0.1
 1
 NIL
@@ -307,7 +450,7 @@ freq-south
 freq-south
 0
 5
-5.0
+3.0
 0.1
 1
 NIL
@@ -322,7 +465,7 @@ freq-west
 freq-west
 0
 5
-5.0
+3.0
 0.1
 1
 NIL
