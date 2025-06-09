@@ -128,22 +128,44 @@ to move-agent
     set wait-counter 0
   ]
 
-  if start-edge = "top" [
-    if direction = "left" and (distancexy -6.5 -6.5) <= 1 [ set heading 90 ]
-    if direction = "right" and (distancexy -6.5 6.5) <= 1 [ set heading 270 ]
+  if breed = cars [
+    if start-edge = "top" [
+      if direction = "left" and (distancexy -6.5 -6.5) <= 1 [ set heading 90 ]
+      if direction = "right" and (distancexy -6.5 6.5) <= 1 [ set heading 270 ]
+    ]
+    if start-edge = "bottom" [
+      if direction = "left" and (distancexy 6.5 6.5) <= 1 [ set heading 270 ]
+      if direction = "right" and (distancexy 6.5 -6.5) <= 1 [ set heading 90 ]
+    ]
+    if start-edge = "left" [
+      if direction = "left" and (distancexy 6.5 -6.5) <= 1 [ set heading 0 ]
+      if direction = "right" and (distancexy -6.5 -6.5) <= 1 [ set heading 180 ]
+    ]
+    if start-edge = "right" [
+      if direction = "left" and (distancexy -6.5 6.5) <= 1 [ set heading 180 ]
+      if direction = "right" and (distancexy 6.5 6.5) <= 1 [ set heading 0 ]
+    ]
   ]
-  if start-edge = "bottom" [
-    if direction = "left" and (distancexy 6.5 6.5) <= 1 [ set heading 270 ]
-    if direction = "right" and (distancexy 6.5 -6.5) <= 1 [ set heading 90 ]
+
+  if breed = bikes [
+    if start-edge = "top" [
+      if direction = "left" and (distancexy -9.37 -9.37) <= 1 [ set heading 90 ]
+      if direction = "right" and (distancexy -9.37 9.37) <= 1 [ set heading 270 ]
+    ]
+    if start-edge = "bottom" [
+      if direction = "left" and (distancexy 9.37 9.37) <= 1 [ set heading 270 ]
+      if direction = "right" and (distancexy 9.37 -9.37) <= 1 [ set heading 90 ]
+    ]
+    if start-edge = "left" [
+      if direction = "left" and (distancexy 9.37 -9.37) <= 1 [ set heading 0 ]
+      if direction = "right" and (distancexy -9.37 -9.37) <= 1 [ set heading 180 ]
+    ]
+    if start-edge = "right" [
+      if direction = "left" and (distancexy -9.37 9.37) <= 1 [ set heading 180 ]
+      if direction = "right" and (distancexy 9.37 9.37) <= 1 [ set heading 0 ]
+    ]
   ]
-  if start-edge = "left" [
-    if direction = "left" and (distancexy 6.5 -6.5) <= 1 [ set heading 0 ]
-    if direction = "right" and (distancexy -6.5 -6.5) <= 1 [ set heading 180 ]
-  ]
-  if start-edge = "right" [
-    if direction = "left" and (distancexy -6.5 6.5) <= 1 [ set heading 180 ]
-    if direction = "right" and (distancexy 6.5 6.5) <= 1 [ set heading 0 ]
-  ]
+
 
   ifelse can-move? speed [
     fd speed
@@ -330,7 +352,6 @@ to-report should-yield?
 
   report false
 end
-
 
 @#$#@#$#@
 GRAPHICS-WINDOW
