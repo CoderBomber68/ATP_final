@@ -2,7 +2,6 @@ globals [
   lane-width
   number-of-bikes
   number-of-cars
-  speed-limit
   max-accel
   max-brake
   used-seed
@@ -32,7 +31,6 @@ to setup
   show used-seed
   random-seed used-seed
 
-  set speed-limit 3
   set max-accel 0.5
   set max-brake 1
 
@@ -48,6 +46,8 @@ end
 
 to go
   ask turtles [ move-agent ]
+
+  detect-accident
 
   make-new-car freq-north (lane-width / 2) min-pycor 0
   make-new-bike freq-north (lane-width / 2) min-pycor 0
@@ -70,7 +70,6 @@ end
 to move-agent
 
   adjust-speed
-  detect-accident
 
   if in-waiting-zone? [
     if crash-in-intersection [
@@ -84,20 +83,6 @@ to move-agent
     set color yellow
   ]
 
-  let agent-ahead one-of other turtles in-cone 3 30
-
-  if agent-ahead != nobody [
-    let dist-ahead distance agent-ahead
-    let min-speed max (list (speed - max-brake) 0)
-    let space-ahead (dist-ahead - 1)
-
-    while [
-      breaking-distance-at speed > space-ahead and
-      speed > min-speed
-    ] [
-      set speed speed - max-brake
-    ]
-  ]
 
   ifelse in-waiting-zone? [
     set wait-counter wait-counter + 1
@@ -175,18 +160,24 @@ to move-agent
 end
 
 to detect-accident
-  if not crashed [
-    let close-agent one-of other turtles with [distance myself < 2 and not crashed]
-    if close-agent != nobody [
+  ask turtles [
+    let other-agent one-of other turtles with [
+      distance myself < 3 and not crashed
+    ]
+
+    if other-agent != nobody and not crashed [
       set crashed true
       set crash-tick ticks
       set wait-counter 0
-      ask close-agent [
+      ask other-agent [
         set crashed true
         set crash-tick ticks
         set wait-counter 0
       ]
-      set num-of-accidents num-of-accidents + 1
+
+      if not ([breed] of other-agent = cars and breed = cars) [
+        set num-of-accidents num-of-accidents + 1
+      ]
     ]
   ]
 end
@@ -199,36 +190,29 @@ end
 
 to adjust-speed
   if in-waiting-zone? [
-    if crash-in-intersection [
-      set speed 0
-      stop
-    ]
+    if crash-in-intersection [ set speed 0 stop ]
+    if should-yield? [ set speed 0 stop ]
   ]
 
-  if in-waiting-zone? and should-yield? [
-    set speed 0
-    stop
+  let my-speed-limit 0
+  if breed = cars [
+    set my-speed-limit car-speed-limit
+  ]
+  if breed = bikes [
+    set my-speed-limit bike-speed-limit
   ]
 
-  if speed = 0 [ set speed 1 ]
+  let target-speed min (list (speed + max-accel) my-speed-limit)
 
-  let my-speed-limit speed-limit
-  if breed = bikes [ set my-speed-limit 2 ]
-  if breed = cars [ set my-speed-limit 3 ]
-
-  let max-speed min (list (speed + max-accel) my-speed-limit)
-  let target-speed max-speed
-
-  let blocked-turtle one-of other turtles in-cone 4 90
-
-  if blocked-turtle != nobody [
-    let dist-ahead distance blocked-turtle - 5
-    while [ breaking-distance-at target-speed > dist-ahead and target-speed > 0 ] [
+  let agent-ahead one-of other turtles in-cone 10 30
+  if agent-ahead != nobody [
+    let space-available (distance agent-ahead) - 3
+    while [ breaking-distance-at target-speed > space-available and target-speed > 0 ] [
       set target-speed target-speed - max-brake
     ]
   ]
 
-  set speed max list 0 target-speed
+  set speed max (list 0 target-speed)
 end
 
 to-report breaking-distance-at [ speed-at-this-tick ]
@@ -352,7 +336,6 @@ to-report should-yield?
 
   report false
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 240
@@ -502,6 +485,54 @@ num-of-accidents
 17
 1
 11
+
+PLOT
+817
+84
+1017
+234
+Number of accidents in time
+ticks
+num-of-accidents
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot count turtles"
+
+SLIDER
+31
+308
+203
+341
+car-speed-limit
+car-speed-limit
+1
+5
+3.5
+0.5
+1
+NIL
+HORIZONTAL
+
+SLIDER
+32
+354
+204
+387
+bike-speed-limit
+bike-speed-limit
+0.5
+2.5
+2.0
+0.5
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
