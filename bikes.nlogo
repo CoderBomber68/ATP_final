@@ -20,10 +20,11 @@ turtles-own [
   yielding
   crash-tick
   wait-counter
+  signaling?
 ]
 
 to setup
-  set used-seed 1270684688
+  set used-seed new-seed
   show used-seed
   random-seed used-seed
   clear-all
@@ -255,13 +256,23 @@ to make-new-bike [ freq x y h ]
       set color red
       set start-edge edge-name h
       set direction one-of ["left" "right" "straight"]
-      set shape (word "bike" ifelse-value (direction = "left") ["-left"] [ifelse-value (direction = "right") ["-right"] [""]])
+      set signaling? (random-float 100 < percent-bikes-signaling)
+
+      ifelse signaling? [
+        if direction = "left" [ set shape "bike-left" ]
+        if direction = "right" [ set shape "bike-right" ]
+        if direction = "straight" [ set shape "bike" ]
+      ] [
+        set shape "bike"
+      ]
+
       set speed 1
       set crashed false
       set wait-counter 0
     ]
   ]
 end
+
 
 to-report spawn-allowed? [ x y h ]
   if h = 0    [ report not any? turtles-on patches with [ pxcor = x and pycor >= y and pycor <= y + 2 ] ]
@@ -532,6 +543,21 @@ bike-speed-limit
 2.5
 2.0
 0.5
+1
+NIL
+HORIZONTAL
+
+SLIDER
+30
+408
+206
+441
+percent-bikes-signaling
+percent-bikes-signaling
+0
+100
+100.0
+1
 1
 NIL
 HORIZONTAL
