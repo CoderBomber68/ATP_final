@@ -23,13 +23,14 @@ turtles-own [
 ]
 
 to setup
+  set used-seed 1270684688
+  show used-seed
+  random-seed used-seed
   clear-all
   set lane-width 12
   set-default-shape cars "car"
   set-default-shape bikes "bike"
-  set used-seed new-seed
-  show used-seed
-  random-seed used-seed
+
 
   set max-accel 0.5
   set max-brake 1
@@ -49,17 +50,17 @@ to go
 
   detect-accident
 
-  make-new-car freq-north (lane-width / 2) min-pycor 0
-  make-new-bike freq-north (lane-width / 2) min-pycor 0
+  make-new-car freq-to-north (lane-width / 2) min-pycor 0
+  make-new-bike freq-to-north (lane-width / 2) min-pycor 0
 
-  make-new-car freq-east min-pxcor (lane-width / -2) 90
-  make-new-bike freq-east min-pxcor (lane-width / -2) 90
+  make-new-car freq-to-east min-pxcor (lane-width / -2) 90
+  make-new-bike freq-to-east min-pxcor (lane-width / -2) 90
 
-  make-new-car freq-south (lane-width / -2) max-pycor 180
-  make-new-bike freq-south (lane-width / -2) max-pycor 180
+  make-new-car freq-to-south (lane-width / -2) max-pycor 180
+  make-new-bike freq-to-south (lane-width / -2) max-pycor 180
 
-  make-new-car freq-west max-pxcor (lane-width / 2) 270
-  make-new-bike freq-west max-pxcor (lane-width / 2) 270
+  make-new-car freq-to-west max-pxcor (lane-width / 2) 270
+  make-new-bike freq-to-west max-pxcor (lane-width / 2) 270
 
   clear-old-crashes
   set crash-in-intersection any? turtles with [crashed and in-intersection-zone?]
@@ -204,7 +205,7 @@ to adjust-speed
 
   let target-speed min (list (speed + max-accel) my-speed-limit)
 
-  let agent-ahead one-of other turtles in-cone 10 30
+  let agent-ahead one-of other turtles in-cone 5 30
   if agent-ahead != nobody [
     let space-available (distance agent-ahead) - 3
     while [ breaking-distance-at target-speed > space-available and target-speed > 0 ] [
@@ -254,6 +255,7 @@ to make-new-bike [ freq x y h ]
       set color red
       set start-edge edge-name h
       set direction one-of ["left" "right" "straight"]
+      set shape (word "bike" ifelse-value (direction = "left") ["-left"] [ifelse-value (direction = "right") ["-right"] [""]])
       set speed 1
       set crashed false
       set wait-counter 0
@@ -403,8 +405,8 @@ SLIDER
 158
 200
 191
-freq-north
-freq-north
+freq-to-north
+freq-to-north
 0
 5
 3.0
@@ -418,8 +420,8 @@ SLIDER
 122
 200
 155
-freq-east
-freq-east
+freq-to-east
+freq-to-east
 0
 5
 3.0
@@ -450,8 +452,8 @@ SLIDER
 193
 200
 226
-freq-south
-freq-south
+freq-to-south
+freq-to-south
 0
 5
 3.0
@@ -465,8 +467,8 @@ SLIDER
 229
 200
 262
-freq-west
-freq-west
+freq-to-west
+freq-to-west
 0
 5
 3.0
@@ -583,8 +585,8 @@ Polygon -7500403 true true 150 0 135 15 120 60 120 105 15 165 15 195 120 180 135
 
 arrow
 true
-0
-Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
+6
+Polygon -7500403 true false 150 0 0 150 105 150 105 293 195 293 195 150 300 150
 
 bike
 true
@@ -608,6 +610,56 @@ Rectangle -16777216 true false 75 75 90 75
 Polygon -2674135 true true 87 70 72 70 71 78 89 78
 Circle -7500403 false false 184 153 22
 Line -7500403 false 206 159 205 228
+
+bike-left
+true
+1
+Line -7500403 false 183 163 184 228
+Circle -7500403 false false 184 213 22
+Circle -7500403 false false 187 156 16
+Circle -16777216 false false 148 28 95
+Circle -2674135 false true 144 24 102
+Circle -2674135 false true 144 174 102
+Circle -16777216 false false 148 177 95
+Polygon -2674135 true true 195 75 90 90 92 98 107 97 122 192 83 207 85 215 123 202 133 211 195 225 195 165 188 164 188 214 133 202 116 94 195 82
+Polygon -2674135 true true 83 208 193 164 196 171 85 217
+Polygon -2674135 true true 188 165 120 91 131 90 196 164
+Line -7500403 false 173 159 219 170
+Line -7500403 false 172 155 172 166
+Line -7500403 false 219 166 219 177
+Polygon -2674135 true true 92 187 92 198 97 208 100 217 93 231 84 231 82 216 83 201 85 184
+Polygon -2674135 true true 86 71 93 98 85 101 81 74
+Rectangle -16777216 true false 75 75 90 75
+Polygon -2674135 true true 87 70 72 70 71 78 89 78
+Circle -7500403 false false 184 153 22
+Line -7500403 false 206 159 205 228
+Polygon -10899396 true false 135 90 45 45 135 0 135 75
+Rectangle -10899396 true false 135 30 240 60
+
+bike-right
+true
+1
+Line -7500403 false 183 163 184 228
+Circle -7500403 false false 184 213 22
+Circle -7500403 false false 187 156 16
+Circle -16777216 false false 148 28 95
+Circle -2674135 false true 144 24 102
+Circle -2674135 false true 144 174 102
+Circle -16777216 false false 148 177 95
+Polygon -2674135 true true 195 75 90 90 92 98 107 97 122 192 83 207 85 215 123 202 133 211 195 225 195 165 188 164 188 214 133 202 116 94 195 82
+Polygon -2674135 true true 83 208 193 164 196 171 85 217
+Polygon -2674135 true true 188 165 120 91 131 90 196 164
+Line -7500403 false 173 159 219 170
+Line -7500403 false 172 155 172 166
+Line -7500403 false 219 166 219 177
+Polygon -2674135 true true 92 187 92 198 97 208 100 217 93 231 84 231 82 216 83 201 85 184
+Polygon -2674135 true true 86 71 93 98 85 101 81 74
+Rectangle -16777216 true false 75 75 90 75
+Polygon -2674135 true true 87 70 72 70 71 78 89 78
+Circle -7500403 false false 184 153 22
+Line -7500403 false 206 159 205 228
+Polygon -10899396 true false 165 90 255 45 165 0 165 60
+Rectangle -10899396 true false 60 30 165 60
 
 box
 false
