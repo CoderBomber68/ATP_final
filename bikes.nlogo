@@ -206,11 +206,29 @@ to adjust-speed
 
   let target-speed min (list (speed + max-accel) my-speed-limit)
 
-  let agent-ahead one-of other turtles in-cone 5 30
+  let agent-ahead min-one-of other turtles in-cone 10 30 with [
+    not crashed and
+    heading = [heading] of myself and
+    abs (subtract-headings heading [heading] of myself) < 10
+  ] [distance myself]
+
   if agent-ahead != nobody [
-    let space-available (distance agent-ahead) - 3
-    while [ breaking-distance-at target-speed > space-available and target-speed > 0 ] [
-      set target-speed target-speed - max-brake
+    let gap (distance agent-ahead) - 2.5
+    let relative-speed speed - [speed] of agent-ahead
+    if gap < 3 or relative-speed > 0 [
+      let safe-braking (relative-speed * 1.2)
+      set target-speed max (list 0 (speed - safe-braking))
+    ]
+  ]
+
+  if breed = cars [
+    let nearby-signaling-bike one-of bikes in-cone 6 60 with [
+      signaling? and not crashed
+    ]
+
+    if nearby-signaling-bike != nobody [
+      set target-speed speed - (max-brake * 1.5)
+      set color orange
     ]
   ]
 
@@ -239,7 +257,7 @@ to make-new-car [ freq x y h ]
 end
 
 to make-new-bike [ freq x y h ]
-  if (random-float 100 < freq) and spawn-allowed? x y h [
+  if random-float 100 < freq [
     let offset 4
     let bx x
     let by y
@@ -249,36 +267,60 @@ to make-new-bike [ freq x y h ]
     if h = 180   [ set bx x - offset ]
     if h = 270   [ set by y + offset ]
 
-    create-bikes 1 [
-      setxy bx by
-      set size 3
-      set heading h
-      set color red
-      set start-edge edge-name h
-      set direction one-of ["left" "right" "straight"]
-      set signaling? (random-float 100 < percent-bikes-signaling)
+    if spawn-allowed? bx by h [
+      ask patch bx by [
+        if not any? bikes in-radius 2 with [heading = h] [
+          sprout-bikes 1 [
+            set size 3
+            set heading h
+            set color red
+            set start-edge edge-name h
+            set direction one-of ["left" "right" "straight"]
+            set signaling? (random-float 100 < percent-bikes-signaling)
 
-      ifelse signaling? [
-        if direction = "left" [ set shape "bike-left" ]
-        if direction = "right" [ set shape "bike-right" ]
-        if direction = "straight" [ set shape "bike" ]
-      ] [
-        set shape "bike"
+            ifelse signaling? [
+              if direction = "left" [ set shape "bike-left" ]
+              if direction = "right" [ set shape "bike-right" ]
+              if direction = "straight" [ set shape "bike" ]
+            ] [
+              set shape "bike"
+            ]
+
+            set speed 1
+            set crashed false
+            set wait-counter 0
+          ]
+        ]
       ]
-
-      set speed 1
-      set crashed false
-      set wait-counter 0
     ]
   ]
 end
 
 
 to-report spawn-allowed? [ x y h ]
-  if h = 0    [ report not any? turtles-on patches with [ pxcor = x and pycor >= y and pycor <= y + 2 ] ]
-  if h = 90   [ report not any? turtles-on patches with [ pycor = y and pxcor >= x and pxcor <= x + 2 ] ]
-  if h = 180  [ report not any? turtles-on patches with [ pxcor = x and pycor <= y and pycor >= y - 2 ] ]
-  if h = 270  [ report not any? turtles-on patches with [ pycor = y and pxcor <= x and pxcor >= x - 2 ] ]
+  let safe-zone 10
+
+  if h = 0 [
+    report not any? turtles-on patches with [
+      pxcor = x and pycor >= y and pycor <= y + safe-zone
+    ]
+  ]
+  if h = 90 [
+    report not any? turtles-on patches with [
+      pycor = y and pxcor >= x and pxcor <= x + safe-zone
+    ]
+  ]
+  if h = 180 [
+    report not any? turtles-on patches with [
+      pxcor = x and pycor <= y and pycor >= y - safe-zone
+    ]
+  ]
+  if h = 270 [
+    report not any? turtles-on patches with [
+      pycor = y and pxcor <= x and pxcor >= x - safe-zone
+    ]
+  ]
+
   report false
 end
 
@@ -556,7 +598,7 @@ percent-bikes-signaling
 percent-bikes-signaling
 0
 100
-100.0
+50.0
 1
 1
 NIL
