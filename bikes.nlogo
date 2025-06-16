@@ -9,6 +9,7 @@ globals [
   crash-in-intersection
 ]
 
+
 breed [bikes bike]
 breed [cars car]
 
@@ -47,6 +48,9 @@ to setup
 end
 
 to go
+  if ticks >= max-ticks [
+    stop
+  ]
   ask turtles [ move-agent ]
 
   detect-accident
@@ -557,7 +561,7 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot count turtles"
+"default" 1.0 0 -16777216 true "" "plot num-of-accidents"
 
 SLIDER
 31
@@ -598,8 +602,23 @@ percent-bikes-signaling
 percent-bikes-signaling
 0
 100
-50.0
+0.0
 1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+818
+261
+990
+294
+max-ticks
+max-ticks
+500
+50000
+100000.0
+100
 1
 NIL
 HORIZONTAL
