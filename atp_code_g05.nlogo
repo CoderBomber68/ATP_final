@@ -52,7 +52,7 @@ to setup
   display
 end
 
-;; function for each tick of the simulation
+;; runs the simulation
 to go
   ask turtles [ move-agent ]
 
